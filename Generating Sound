@@ -1,0 +1,65 @@
+import time
+import numpy
+import pyaudio
+import fluidsynth
+import wave
+import sounddevice as sd
+from scipy.io.wavfile import write
+
+pa = pyaudio.PyAudio()
+sd.query_devices()
+strm = pa.open(
+    format = pyaudio.paInt16,
+    channels = 2,
+    rate = 44100,
+    output = True)
+'''
+strm = pa.open(format =
+                   pa.get_format_from_width(wf.getsampwidth()),
+                   channels = wf.getnchannels(),
+                   rate = wf.getframerate(),
+                   output = True)
+'''
+s = []
+
+fl = fluidsynth.Synth()
+
+# Initial silence is 1 second
+s = numpy.append(s, fl.get_samples(44100 * 1))
+fl.start('dsound')
+sfid = fl.sfload(r'C:\Users\User\Desktop\FluidR3_GM\FluidR3_GM.sf2')
+fl.program_select(0, sfid, 0, 0)
+
+fl.noteon(0, 60, 30)
+fl.noteon(0, 67, 30)
+fl.noteon(0, 76, 30)
+
+# Chord is held for 2 seconds
+s = numpy.append(s, fl.get_samples(44100 * 2))
+
+fl.noteoff(0, 60)
+fl.noteoff(0, 67)
+fl.noteoff(0, 76)
+
+# Decay of chord is held for 1 second
+s = numpy.append(s, fl.get_samples(44100 * 1))
+
+fl.delete()
+
+samps = fluidsynth.raw_audio_string(s)
+
+print len(s)
+print 'Starting playback'
+strm.write(samps)
+#print(s)
+scaled = numpy.int16(s/numpy.max(numpy.abs(s)) * 32767)
+write('test.wav', 44100, scaled)
+
+'''
+wf = wave.open('test.wav', 'wb')
+wf.setnchannels(2)
+wf.setsampwidth(pa.get_sample_size(pyaudio.paInt16))
+wf.setframerate(2)
+wf.writeframes(b''.join(samps))
+wf.close()
+'''
